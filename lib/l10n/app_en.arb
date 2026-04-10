@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "profileTitle": "Profile",
+  "languageLabel": "App Language",
+  "useSpotifyLabel": "Use my Spotify account",
+  "clientIdLabel": "Client ID",
+  "clientSecretLabel": "Client Secret",
+  "saveButton": "Save changes",
+  "saveSuccessMessage": "Saved successfully!",
+  "favoritesTitle": "My Favorites",
+  "emptyFavoritesMessage": "Nothing here... for now! 🎵",
+  "themeLight": "Light Mode",
+  "themeDark": "Dark Mode",
+  "logout": "Logout",
+  "cancel": "Cancel",
+  "login": "Login",
+  "register": "Register"
+}
