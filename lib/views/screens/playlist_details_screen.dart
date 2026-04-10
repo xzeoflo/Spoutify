@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../data/providers/music_provider.dart';
+import '../../l10n/app_localizations.dart'; 
 
 class PlaylistDetailsScreen extends StatefulWidget {
   final String playlistId;
@@ -21,16 +22,18 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final musicProvider = context.read<MusicProvider>();
+    final theme = Theme.of(context); 
+    final loc = AppLocalizations.of(context)!; 
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(widget.playlistName, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
+        elevation: 0,
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        // On écoute les changements en temps réel sur la table
         stream: Supabase.instance.client
             .from('playlist_tracks')
             .stream(primaryKey: ['id'])
@@ -43,13 +46,13 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
           final tracks = snapshot.data ?? [];
 
           if (tracks.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.music_off, color: Colors.grey, size: 64),
-                  SizedBox(height: 16),
-                  Text("Cette playlist est vide", style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  const Icon(Icons.music_off, color: Colors.grey, size: 64),
+                  const SizedBox(height: 16),
+                  Text(loc.emptyPlaylist, style: const TextStyle(color: Colors.grey, fontSize: 16)),
                 ],
               ),
             );
@@ -71,36 +74,40 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                           width: 50,
                           height: 50,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.music_note, color: Colors.white),
+                          errorBuilder: (_, __, ___) => Icon(Icons.music_note, color: theme.iconTheme.color),
                         )
-                      : const Icon(Icons.music_note, color: Colors.white),
+                      : Icon(Icons.music_note, color: theme.iconTheme.color),
                 ),
                 title: Text(
-                  track['title'] ?? 'Titre inconnu',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                  track['title'] ?? loc.unknownTitle, 
+                  style: TextStyle(
+                    color: theme.textTheme.bodyLarge?.color,
+                    fontWeight: FontWeight.w500
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
-                  track['artist'] ?? 'Artiste inconnu',
-                  style: const TextStyle(color: Colors.grey),
+                  track['artist'] ?? loc.unknownArtist, 
+                  style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
                   onPressed: () async {
-                    // 1. Appel de la suppression
                     await musicProvider.removeFromPlaylist(widget.playlistId, trackId);
                     
-                    // 2. On force le rafraîchissement local pour l'UI
                     if (mounted) {
                       setState(() {}); 
                       
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Musique retirée"),
-                          duration: Duration(seconds: 1),
+                        SnackBar(
+                          content: Text(loc.trackRemoved), 
+                          duration: const Duration(seconds: 1),
+                          backgroundColor: theme.brightness == Brightness.dark ? Colors.grey[800] : Colors.black87,
                         ),
                       );
                     }

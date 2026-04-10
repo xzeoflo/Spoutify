@@ -6,7 +6,7 @@ class AuthProvider extends ChangeNotifier {
   User? get currentUser => _supabase.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
 
-  // Inscription + Création du profil en base
+  // Inscription 
   Future<void> signUp(String email, String password) async {
     try {
       await Supabase.instance.client.auth.signOut();
@@ -17,12 +17,11 @@ class AuthProvider extends ChangeNotifier {
       
       final newUser = res.user;
 
-      // Si l'inscription réussit, on crée le profil dans la table 'profiles'
+      // inscription réussie = profil user 
       if (newUser != null) {
         await _supabase.from('profiles').insert({
           'id': newUser.id,
-          'language': 'fr', // Langue par défaut
-          'is_dark_mode': true,
+          'language': 'fr', 
           'spotify_connected': false,
         });
       }

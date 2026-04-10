@@ -6,14 +6,14 @@ class LocaleProvider extends ChangeNotifier {
 
   Locale get locale => _locale;
 
-  // Définit la langue localement et notifie l'app
+  // Définit la langue 
   void setLocale(Locale locale) {
     if (!['en', 'fr'].contains(locale.languageCode)) return;
     _locale = locale;
     notifyListeners(); 
   }
 
-  // Charge la langue depuis la base de données Supabase au démarrage
+  // Charge la langue 
   Future<void> loadUserLanguage() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;

@@ -21,7 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserProfile();
   }
 
-  // Chargement initial des données depuis Supabase
+  // Chargement des donnees supabase
   Future<void> _loadUserProfile() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -60,8 +60,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       if (connect) {
-        // TODO: Ici sera appelé le SpotifyService pour le flux OAuth2
-        // Pour l'instant, on simule l'acceptation et on met à jour Supabase
         print("Ouverture de l'authentification Spotify pour : ${user.email}");
         
         await Supabase.instance.client.from('profiles').update({
@@ -71,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         setState(() => _isSpotifyConnected = true);
       } else {
-        // Déconnexion : on passe le flag à false
+        // Déconnexion 
         await Supabase.instance.client.from('profiles').update({
           'spotify_connected': false,
           'updated_at': DateTime.now().toIso8601String(),
@@ -103,7 +101,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // Section Avatar et Email
                 const CircleAvatar(
                   radius: 50,
                   backgroundColor: Color(0xFF1DB954),
@@ -116,12 +113,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 30),
                 
-                // Section Paramètres
+                
                 Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   child: Column(
                     children: [
-                      // --- SÉLECTEUR DE LANGUE ---
+                      // Sélecteur de langue
                       ListTile(
                         leading: const Icon(Icons.language, color: Colors.blue),
                         title: Text(loc.languageLabel),
@@ -146,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const Divider(height: 1),
 
-                      // --- CONNEXION SPOTIFY ---
+                      //connectivité Spotify
                       SwitchListTile(
                         secondary: Image.network(
                           'https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_RGB_Green.png',
@@ -168,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 
                 const SizedBox(height: 40),
 
-                // Bouton de déconnexion globale (Optionnel mais utile ici)
+                // Bouton de déconnexion 
                 OutlinedButton.icon(
                   onPressed: () async {
                     await Supabase.instance.client.auth.signOut();
@@ -185,7 +182,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 20),
                 
-                // Information de sauvegarde automatique
                 Text(
                   "Les modifications sont enregistrées automatiquement",
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),

@@ -15,51 +15,29 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  // On passe le stream en nullable pour le réinitialiser si l'user change
-  Stream<List<Map<String, dynamic>>>? _playlistStream;
-  StreamSubscription<AuthState>? _authSubscription;
+  Future<List<Map<String, dynamic>>>? _playlistsFuture;
 
   @override
   void initState() {
     super.initState();
-    _initStream();
+    _refreshPlaylists();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MusicProvider>().fetchFavorites();
     });
-
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedOut) {
-        if (mounted) {
-          final provider = context.read<MusicProvider>();
-          provider.favorites = [];
-          provider.notifyListeners();
-          setState(() => _playlistStream = null);
-        }
-      } else if (data.event == AuthChangeEvent.signedIn) {
-        _initStream();
-      }
-    });
   }
 
-  // Initialisation du stream avec filtre user_id pour garantir la réactivité
-  void _initStream() {
+  void _refreshPlaylists() {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       setState(() {
-        _playlistStream = Supabase.instance.client
+        _playlistsFuture = Supabase.instance.client
             .from('playlists')
-            .stream(primaryKey: ['id'])
-            .eq('user_id', user.id) // Filtrer par utilisateur
+            .select()
+            .eq('user_id', user.id)
             .order('name');
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _authSubscription?.cancel();
-    super.dispose();
   }
 
   void _showCreatePlaylistDialog(BuildContext context) {
@@ -70,8 +48,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: theme.brightness == Brightness.dark ? Colors.grey[900] : Colors.white,
-        title: Text(loc.newPlaylist, style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+        backgroundColor: theme.dialogBackgroundColor,
+        title: Text(loc.newPlaylist, style: TextStyle(color: theme.textTheme.titleLarge?.color)),
         content: TextField(
           controller: playlistController,
           autofocus: true,
@@ -86,7 +64,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(loc.cancel, style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
+            child: Text(loc.cancel, style: TextStyle(color: theme.colorScheme.primary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1DB954)),
@@ -95,14 +73,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               if (name.isNotEmpty) {
                 final user = Supabase.instance.client.auth.currentUser;
                 if (user != null) {
-                  try {
-                    await Supabase.instance.client.from('playlists').insert({
-                      'user_id': user.id,
-                      'name': name,
-                    });
-                    if (context.mounted) Navigator.pop(context);
-                  } catch (e) {
-                    debugPrint("Erreur création playlist: $e");
+                  await Supabase.instance.client.from('playlists').insert({'user_id': user.id, 'name': name});
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    _refreshPlaylists(); 
                   }
                 }
               }
@@ -122,12 +96,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      // On utilise les couleurs du thème au lieu de Colors.black
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(loc.favoritesTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: theme.appBarTheme.backgroundColor,
-        iconTheme: theme.iconTheme,
+        elevation: 0,
       ),
       body: CustomScrollView(
         slivers: [
@@ -135,92 +108,65 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(loc.myPlaylists, 
-                style: TextStyle(
-                  color: theme.textTheme.bodyLarge?.color, 
-                  fontSize: 20, 
-                  fontWeight: FontWeight.bold
-                )
-              ),
+                style: TextStyle(color: theme.textTheme.headlineSmall?.color, fontSize: 20, fontWeight: FontWeight.bold)),
             ),
           ),
           SliverToBoxAdapter(
             child: SizedBox(
               height: 180,
-              child: _playlistStream == null 
-                ? const Center(child: CircularProgressIndicator())
-                : StreamBuilder<List<Map<String, dynamic>>>(
-                stream: _playlistStream,
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _playlistsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator(color: Color(0xFF1DB954)));
                   }
-                  
                   final playlists = snapshot.data ?? [];
                   if (playlists.isEmpty) {
                     return Center(child: Text(loc.noPlaylists, style: const TextStyle(color: Colors.grey)));
                   }
-
                   return ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     itemCount: playlists.length,
                     itemBuilder: (context, index) {
                       final pl = playlists[index];
-                      final playlistId = pl['id'].toString();
-
-                      return Stack(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PlaylistDetailsScreen(
-                                  playlistId: playlistId,
-                                  playlistName: pl['name'],
+                      return Container(
+                        width: 140,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey[900] : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.black, width: 1.2),
+                        ),
+                        child: InkWell(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => PlaylistDetailsScreen(playlistId: pl['id'].toString(), playlistName: pl['name']),
+                          )),
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.playlist_play, color: Color(0xFF1DB954), size: 50),
+                                    const SizedBox(height: 8),
+                                    Text(pl['name'], style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
+                                  ],
                                 ),
                               ),
-                            ),
-                            child: Container(
-                              width: 140,
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              decoration: BoxDecoration(
-                                // Couleur de carte adaptée au thème
-                                color: isDark ? Colors.grey[900] : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(12),
+                              Positioned(
+                                top: 4, right: 4,
+                                child: IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                  onPressed: () async {
+                                    await musicProvider.deletePlaylist(pl['id'].toString());
+                                    _refreshPlaylists();
+                                  },
+                                ),
                               ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.playlist_play, color: Color(0xFF1DB954), size: 60),
-                                  const SizedBox(height: 10),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: Text(
-                                      pl['name'],
-                                      style: TextStyle(
-                                        color: theme.textTheme.bodyLarge?.color, 
-                                        fontWeight: FontWeight.bold
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            ],
                           ),
-                          Positioned(
-                            top: 5,
-                            right: 12,
-                            child: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
-                              onPressed: () async {
-                                await musicProvider.deletePlaylist(playlistId);
-                              },
-                            ),
-                          ),
-                        ],
+                        ),
                       );
                     },
                   );
@@ -232,36 +178,22 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
               child: Text(loc.likedTracks, 
-                style: TextStyle(
-                  color: theme.textTheme.bodyLarge?.color, 
-                  fontSize: 20, 
-                  fontWeight: FontWeight.bold
-                )
-              ),
+                style: TextStyle(color: theme.textTheme.headlineSmall?.color, fontSize: 20, fontWeight: FontWeight.bold)),
             ),
           ),
-          musicProvider.favorites.isEmpty
-              ? SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 20),
-                      child: Text(loc.emptyFavoritesMessage, style: const TextStyle(color: Colors.grey)),
-                    ),
-                  ),
-                )
-              : SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => TrackTile(track: musicProvider.favorites[index]),
-                    childCount: musicProvider.favorites.length,
-                  ),
-                ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => TrackTile(track: musicProvider.favorites[index]),
+              childCount: musicProvider.favorites.length,
+            ),
+          ),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF1DB954),
         onPressed: () => _showCreatePlaylistDialog(context),
-        child: const Icon(Icons.add, color: Colors.white, size: 30),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

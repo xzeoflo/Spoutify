@@ -16,7 +16,7 @@ class Track {
     );
   }
 
-  // Mapping depuis Supabase (les colonnes de ta table 'favorites')
+  // Mapping depuis Supabase 
   factory Track.fromSupabase(Map<String, dynamic> map) {
     return Track(
       id: map['track_id'],

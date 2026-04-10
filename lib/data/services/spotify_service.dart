@@ -5,7 +5,7 @@ import '../../core/constants.dart';
 class SpotifyService {
   String? _accessToken;
 
-  // Récupère un token d'accès temporaire via Client ID et Secret
+  // Récupère un token d'accès temporaire 
   Future<void> _authenticate() async {
     final authStr = base64Encode(utf8.encode('${AppConstants.spotifyClientId}:${AppConstants.spotifyClientSecret}'));
     

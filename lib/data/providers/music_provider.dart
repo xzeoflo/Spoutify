@@ -12,14 +12,21 @@ class MusicProvider extends ChangeNotifier {
   bool isLoading = false;
   String? _accessToken;
 
-  // --- ÉTAT ---
+  
   
   bool isFavorite(String trackId) {
     return favorites.any((t) => t.id == trackId);
   }
 
-  // --- LOGIQUE SPOTIFY ---
-  
+  // Vider les favoris 
+  void clearFavorites() {
+    favorites = [];
+    searchResults = [];
+    notifyListeners();
+  }
+
+
+  // recup token spotify
   Future<void> _getSpotifyToken() async {
     const clientId = 'TON_CLIENT_ID';
     const clientSecret = 'TON_CLIENT_SECRET';
@@ -41,7 +48,7 @@ class MusicProvider extends ChangeNotifier {
       debugPrint("Erreur Token Spotify: $e");
     }
   }
-
+  // Recherche de musiques sur Spotify
   Future<void> searchTracks(String query) async {
     if (query.isEmpty) return;
     isLoading = true;
@@ -69,8 +76,8 @@ class MusicProvider extends ChangeNotifier {
     }
   }
 
-  // --- LOGIQUE FAVORIS (Supabase) ---
-
+  
+  //recip les favoris
   Future<void> fetchFavorites() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
@@ -83,7 +90,7 @@ class MusicProvider extends ChangeNotifier {
       debugPrint("Erreur Supabase Fetch: $e");
     }
   }
-
+  // montre les favoris
   Future<void> toggleFavorite(dynamic trackData) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
@@ -114,14 +121,13 @@ class MusicProvider extends ChangeNotifier {
     }
   }
 
-  // --- LOGIQUE PLAYLISTS (Supabase) ---
-
+  
+  // Ajouter une musique à une playlist
   Future<void> addToPlaylist(String playlistId, Track track) async {
     final authUser = _supabase.auth.currentUser;
     if (authUser == null) throw 'Veuillez vous connecter';
 
     try {
-      // On tente l'insertion directe
       await _supabase.from('playlist_tracks').insert({
         'playlist_id': playlistId,
         'track_id': track.id,
@@ -130,10 +136,8 @@ class MusicProvider extends ChangeNotifier {
         'image_url': track.imageUrl,
         'user_id': authUser.id, 
       });
-      
       debugPrint("Titre ajouté avec succès !");
     } on PostgrestException catch (e) {
-      // Détection de la contrainte UNIQUE (Code 23505 sur Postgres)
       if (e.code == '23505') {
         throw 'Cette musique est déjà dans la playlist !';
       } else {
@@ -143,7 +147,7 @@ class MusicProvider extends ChangeNotifier {
       throw 'Une erreur imprévue est survenue';
     }
   }
-
+  // Supprimer une musique d'une playlist
   Future<void> removeFromPlaylist(String playlistId, String trackId) async {
     try {
       await _supabase
@@ -151,13 +155,12 @@ class MusicProvider extends ChangeNotifier {
           .delete()
           .eq('playlist_id', playlistId)
           .eq('track_id', trackId);
-      
       notifyListeners();
     } catch (e) {
       debugPrint("Erreur suppression musique : $e");
     }
   }
-
+  //supprimer une playlist
   Future<void> deletePlaylist(String playlistId) async {
     try {
       await _supabase.from('playlists').delete().eq('id', playlistId);

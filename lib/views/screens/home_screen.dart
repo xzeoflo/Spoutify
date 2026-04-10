@@ -30,6 +30,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkSpotifyConnection();
   }
 
+  Future<void> _manualReload() async {
+    setState(() {
+      _isSearching = false;
+      _searchController.clear();
+      _searchResults = [];
+    });
+    await _checkSpotifyConnection();
+  }
+
   Future<void> _checkSpotifyConnection() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
@@ -45,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
       } catch (e) {
         debugPrint("Erreur lors de la vérification Spotify : $e");
       }
+    } else {
+      if (mounted) setState(() => _isSpotifyConnected = false);
     }
   }
 
@@ -67,10 +78,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- LOGIQUE AJOUT PLAYLIST AVEC GESTION DOUBLON ---
   void _showAddToPlaylistDialog(BuildContext context, dynamic track) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
+    
+    final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
 
     final List<dynamic> playlists = await Supabase.instance.client
         .from('playlists')
@@ -82,19 +95,19 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text("Ajouter à la playlist", style: TextStyle(color: Colors.white)),
+        backgroundColor: theme.dialogBackgroundColor,
+        title: Text(loc.addToPlaylist, style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
         content: SizedBox(
           width: double.maxFinite,
           child: playlists.isEmpty 
-            ? const Text("Aucune playlist créée", style: TextStyle(color: Colors.grey))
+            ? Text(loc.noPlaylistsCreated, style: const TextStyle(color: Colors.grey))
             : ListView.builder(
                 shrinkWrap: true,
                 itemCount: playlists.length,
                 itemBuilder: (context, i) {
                   return ListTile(
                     leading: const Icon(Icons.playlist_add, color: Color(0xFF1DB954)),
-                    title: Text(playlists[i]['name'], style: const TextStyle(color: Colors.white)),
+                    title: Text(playlists[i]['name'], style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
                     onTap: () async {
                       try {
                         await Supabase.instance.client.from('playlist_tracks').insert({
@@ -110,18 +123,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text("Ajouté à ${playlists[i]['name']}"),
-                              backgroundColor: Colors.grey[800],
+                              content: Text("${loc.addedTo} ${playlists[i]['name']}"),
+                              backgroundColor: theme.brightness == Brightness.dark ? Colors.grey[800] : Colors.black87,
                             )
                           );
                         }
                       } on PostgrestException catch (e) {
-                        // Capture de l'erreur de la contrainte UNIQUE (Code 23505)
                         if (e.code == '23505' && context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Cette musique est déjà dans la playlist !"),
+                            SnackBar(
+                              content: Text(loc.trackAlreadyInPlaylist),
                               backgroundColor: Colors.redAccent,
                             )
                           );
@@ -145,57 +157,63 @@ class _HomeScreenState extends State<HomeScreen> {
     final localeProv = context.read<LocaleProvider>();
     final musicProv = context.watch<MusicProvider>(); 
     final loc = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final userEmail = auth.currentUser?.email;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
         elevation: 0,
-        // Logo Spoutify mis à jour
-        title: const Text("Spoutify", 
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 26, color: Colors.white, letterSpacing: -1.5)),
+        title: Text("Spoutify", 
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 26, color: theme.textTheme.bodyLarge?.color, letterSpacing: -1.5)),
         actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: theme.iconTheme.color),
+            onPressed: _manualReload,
+            tooltip: 'Reload',
+          ),
           IconButton(
             icon: const Icon(Icons.favorite, color: Color(0xFF1DB954)),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen())),
           ),
-          _buildUserMenu(context, auth, themeProv, localeProv, loc),
+          _buildUserMenu(context, auth, themeProv, localeProv, loc, theme),
         ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSearchBar(),
+          _buildSearchBar(loc, theme),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
-              auth.isAuthenticated ? "Bon retour, $userEmail" : "Bienvenue sur Spoutify",
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              auth.isAuthenticated ? "${loc.welcomeBack}, $userEmail" : loc.welcomeSpoutify,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
             ),
           ),
           Expanded(
-            child: _isSearching ? _buildSearchResultsView(musicProv) : _buildMainHome(),
+            child: _isSearching ? _buildSearchResultsView(musicProv, theme) : _buildMainHome(loc, theme),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalizations loc, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: TextField(
         controller: _searchController,
         onChanged: _onSearch,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: theme.textTheme.bodyLarge?.color),
         decoration: InputDecoration(
-          hintText: "Artistes, titres ou albums",
+          hintText: loc.searchHint,
           hintStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: const Icon(Icons.search, color: Colors.white),
+          prefixIcon: Icon(Icons.search, color: theme.iconTheme.color),
           suffixIcon: _searchController.text.isNotEmpty 
               ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.white),
+                  icon: Icon(Icons.clear, color: theme.iconTheme.color),
                   onPressed: () {
                     _searchController.clear();
                     _onSearch("");
@@ -203,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : null,
           filled: true,
-          fillColor: Colors.grey[900],
+          fillColor: theme.brightness == Brightness.dark ? Colors.grey[900] : Colors.grey[200],
           contentPadding: const EdgeInsets.symmetric(horizontal: 20),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
         ),
@@ -211,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSearchResultsView(MusicProvider musicProv) {
+  Widget _buildSearchResultsView(MusicProvider musicProv, ThemeData theme) {
     if (_searchResults.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF1DB954)));
     }
@@ -231,10 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(4),
             child: imageUrl != null 
               ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
-              : Container(width: 50, height: 50, color: Colors.grey[900], child: const Icon(Icons.music_note)),
+              : Container(width: 50, height: 50, color: theme.brightness == Brightness.dark ? Colors.grey[900] : Colors.grey[300], child: Icon(Icons.music_note, color: theme.iconTheme.color)),
           ),
-          title: Text(track['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-          subtitle: Text(track['artists'][0]['name'], style: const TextStyle(color: Colors.grey)),
+          title: Text(track['name'], style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+          subtitle: Text(track['artists'][0]['name'], style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -256,24 +274,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ... (Reste des widgets _buildMainHome, _buildHorizontalSection, etc. identiques)
-  Widget _buildMainHome() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHorizontalSection("Conçu pour vous", [
-            {'title': 'Daily Mix 1', 'desc': 'Lumi Athena, ODECORE...', 'url': 'https://picsum.photos/seed/mix1/200'},
-            {'title': 'Daily Mix 2', 'desc': 'ptasinski, KUTE...', 'url': 'https://picsum.photos/seed/mix2/200'},
-            {'title': 'Daily Mix 3', 'desc': 'Anar, KSLV Noh...', 'url': 'https://picsum.photos/seed/mix3/200'},
-          ]),
-        ],
+  Widget _buildMainHome(AppLocalizations loc, ThemeData theme) {
+    return RefreshIndicator(
+      onRefresh: _manualReload,
+      color: const Color(0xFF1DB954),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHorizontalSection(loc.madeForYou, loc.showAll, [
+              {'title': 'Daily Mix 1', 'desc': 'Lumi Athena, ODECORE...', 'url': 'https://picsum.photos/seed/mix1/200'},
+              {'title': 'Daily Mix 2', 'desc': 'ptasinski, KUTE...', 'url': 'https://picsum.photos/seed/mix2/200'},
+              {'title': 'Daily Mix 3', 'desc': 'Anar, KSLV Noh...', 'url': 'https://picsum.photos/seed/mix3/200'},
+            ], theme),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHorizontalSection(String title, List<Map<String, String>> items) {
+  Widget _buildHorizontalSection(String title, String showAllText, List<Map<String, String>> items, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -282,8 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-              const Text("Tout afficher", style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
+              Text(showAllText, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -307,14 +328,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         items[i]['url']!,
                         height: 150, width: 150, fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
-                          height: 150, width: 150, color: Colors.grey[850],
-                          child: const Icon(Icons.music_note, color: Colors.white54, size: 50),
+                          height: 150, width: 150, color: theme.brightness == Brightness.dark ? Colors.grey[850] : Colors.grey[300],
+                          child: const Icon(Icons.music_note, color: Colors.grey, size: 50),
                         ),
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text(items[i]['title']!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1),
-                    Text(items[i]['desc']!, style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 2),
+                    Text(items[i]['title']!, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color), maxLines: 1),
+                    Text(items[i]['desc']!, style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6), fontSize: 12), maxLines: 2),
                   ],
                 ),
               ),
@@ -325,45 +346,49 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildUserMenu(BuildContext context, AuthProvider auth, ThemeProvider themeProv, LocaleProvider localeProv, AppLocalizations loc) {
+  Widget _buildUserMenu(BuildContext context, AuthProvider auth, ThemeProvider themeProv, LocaleProvider localeProv, AppLocalizations loc, ThemeData theme) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.account_circle_outlined, size: 28),
-      color: Colors.grey[900],
+      color: theme.popupMenuTheme.color ?? theme.cardColor,
       onSelected: (value) async {
         if (value == 'theme') themeProv.toggleTheme();
         if (value == 'profile') Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
-        if (value == 'logout') await auth.signOut();
-        if (value == 'login') _showAuthDialog(context, true);
-        if (value == 'register') _showAuthDialog(context, false);
+        if (value == 'logout') {
+          context.read<MusicProvider>().clearFavorites();
+          await auth.signOut();
+          _manualReload(); 
+        }
+        if (value == 'login') _showAuthDialog(context, true, loc, theme);
+        if (value == 'register') _showAuthDialog(context, false, loc, theme);
       },
       itemBuilder: (context) => [
-        PopupMenuItem(value: 'theme', child: Row(children: [Icon(themeProv.isDarkMode ? Icons.light_mode : Icons.dark_mode, color: Colors.white), const SizedBox(width: 10), Text(themeProv.isDarkMode ? loc.themeLight : loc.themeDark, style: const TextStyle(color: Colors.white))])),
+        PopupMenuItem(value: 'theme', child: Row(children: [Icon(themeProv.isDarkMode ? Icons.light_mode : Icons.dark_mode, color: theme.iconTheme.color), const SizedBox(width: 10), Text(themeProv.isDarkMode ? loc.themeLight : loc.themeDark, style: TextStyle(color: theme.textTheme.bodyLarge?.color))])),
         const PopupMenuDivider(),
         if (auth.isAuthenticated) ...[
-          PopupMenuItem(value: 'profile', child: Row(children: [const Icon(Icons.person_outline, color: Colors.white), const SizedBox(width: 10), Text(loc.profileTitle, style: const TextStyle(color: Colors.white))])),
-          PopupMenuItem(value: 'logout', child: Row(children: [const Icon(Icons.logout, color: Colors.white), const SizedBox(width: 10), Text(loc.logout, style: const TextStyle(color: Colors.white))])),
+          PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person_outline, color: theme.iconTheme.color), const SizedBox(width: 10), Text(loc.profileTitle, style: TextStyle(color: theme.textTheme.bodyLarge?.color))])),
+          PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, color: theme.iconTheme.color), const SizedBox(width: 10), Text(loc.logout, style: TextStyle(color: theme.textTheme.bodyLarge?.color))])),
         ] else ...[
-          PopupMenuItem(value: 'login', child: Text(loc.login, style: const TextStyle(color: Colors.white))),
-          PopupMenuItem(value: 'register', child: Text(loc.register, style: const TextStyle(color: Colors.white))),
+          PopupMenuItem(value: 'login', child: Text(loc.login, style: TextStyle(color: theme.textTheme.bodyLarge?.color))),
+          PopupMenuItem(value: 'register', child: Text(loc.register, style: TextStyle(color: theme.textTheme.bodyLarge?.color))),
         ],
       ],
     );
   }
 
-  void _showAuthDialog(BuildContext context, bool isLogin) {
+  void _showAuthDialog(BuildContext context, bool isLogin, AppLocalizations loc, ThemeData theme) {
     final emailController = TextEditingController();
     final passController = TextEditingController();
-    final loc = AppLocalizations.of(context)!;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: Text(isLogin ? loc.login : loc.register, style: const TextStyle(color: Colors.white)),
+        backgroundColor: theme.dialogBackgroundColor,
+        title: Text(isLogin ? loc.login : loc.register, style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: emailController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Email", labelStyle: TextStyle(color: Colors.grey))),
-            TextField(controller: passController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Mot de passe", labelStyle: TextStyle(color: Colors.grey)), obscureText: true),
+            TextField(controller: emailController, style: TextStyle(color: theme.textTheme.bodyLarge?.color), decoration: InputDecoration(labelText: loc.email, labelStyle: const TextStyle(color: Colors.grey))),
+            TextField(controller: passController, style: TextStyle(color: theme.textTheme.bodyLarge?.color), decoration: InputDecoration(labelText: loc.password, labelStyle: const TextStyle(color: Colors.grey)), obscureText: true),
           ],
         ),
         actions: [
@@ -372,17 +397,45 @@ class _HomeScreenState extends State<HomeScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1DB954)),
             onPressed: () async {
               final authProv = context.read<AuthProvider>();
-              if (isLogin) {
-                await authProv.signIn(emailController.text, passController.text);
-              } else {
-                await authProv.signUp(emailController.text, passController.text);
-              }
-              if (mounted) {
-                _checkSpotifyConnection();
-                Navigator.pop(context);
+              try {
+                if (isLogin) {
+                  await authProv.signIn(emailController.text, passController.text);
+                } else {
+                  await authProv.signUp(emailController.text, passController.text);
+                }
+                
+                if (mounted) {
+                  Navigator.pop(context);
+                  _manualReload();
+                }
+              } on AuthApiException catch (e) {
+                String errorMsg = e.message;
+                if (e.code == 'user_already_exists') {
+                  errorMsg = "Cet utilisateur est déjà inscrit.";
+                } else if (e.code == 'invalid_credentials') {
+                  errorMsg = "Email ou mot de passe incorrect.";
+                }
+
+                if (mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text("Erreur"),
+                      content: Text(errorMsg),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text("OK", style: TextStyle(color: Color(0xFF1DB954))),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint("Erreur auth: $e");
               }
             },
-            child: Text(isLogin ? loc.login : loc.register, style: const TextStyle(color: Colors.black)),
+            child: Text(isLogin ? loc.login : loc.register, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

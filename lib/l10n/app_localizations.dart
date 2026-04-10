@@ -137,7 +137,7 @@ abstract class AppLocalizations {
   /// No description provided for @saveSuccessMessage.
   ///
   /// In fr, this message translates to:
-  /// **'Sauvegardé avec succès !'**
+  /// **'Enregistré avec succès !'**
   String get saveSuccessMessage;
 
   /// No description provided for @favoritesTitle.
@@ -155,13 +155,13 @@ abstract class AppLocalizations {
   /// No description provided for @themeLight.
   ///
   /// In fr, this message translates to:
-  /// **'Mode Clair'**
+  /// **'Mode clair'**
   String get themeLight;
 
   /// No description provided for @themeDark.
   ///
   /// In fr, this message translates to:
-  /// **'Mode Sombre'**
+  /// **'Mode sombre'**
   String get themeDark;
 
   /// No description provided for @logout.
@@ -187,6 +187,132 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Inscription'**
   String get register;
+
+  /// No description provided for @myPlaylists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes playlists'**
+  String get myPlaylists;
+
+  /// No description provided for @likedTracks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Titres likés'**
+  String get likedTracks;
+
+  /// No description provided for @noPlaylists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune playlist pour le moment'**
+  String get noPlaylists;
+
+  /// No description provided for @newPlaylist.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle playlist'**
+  String get newPlaylist;
+
+  /// No description provided for @playlistNameHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrez un nom...'**
+  String get playlistNameHint;
+
+  /// No description provided for @createButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer'**
+  String get createButton;
+
+  /// No description provided for @emptyPlaylist.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette playlist est vide'**
+  String get emptyPlaylist;
+
+  /// No description provided for @unknownTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Titre inconnu'**
+  String get unknownTitle;
+
+  /// No description provided for @unknownArtist.
+  ///
+  /// In fr, this message translates to:
+  /// **'Artiste inconnu'**
+  String get unknownArtist;
+
+  /// No description provided for @trackRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Titre supprimé'**
+  String get trackRemoved;
+
+  /// No description provided for @addToPlaylist.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à la playlist'**
+  String get addToPlaylist;
+
+  /// No description provided for @noPlaylistsCreated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune playlist créée'**
+  String get noPlaylistsCreated;
+
+  /// No description provided for @addedTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté à'**
+  String get addedTo;
+
+  /// No description provided for @trackAlreadyInPlaylist.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette musique est déjà dans la playlist !'**
+  String get trackAlreadyInPlaylist;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Artistes, titres ou albums'**
+  String get searchHint;
+
+  /// No description provided for @welcomeBack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bon retour'**
+  String get welcomeBack;
+
+  /// No description provided for @welcomeSpoutify.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bienvenue sur Spoutify'**
+  String get welcomeSpoutify;
+
+  /// No description provided for @madeForYou.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conçu pour vous'**
+  String get madeForYou;
+
+  /// No description provided for @showAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout afficher'**
+  String get showAll;
+
+  /// No description provided for @email.
+  ///
+  /// In fr, this message translates to:
+  /// **'Email'**
+  String get email;
+
+  /// No description provided for @password.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe'**
+  String get password;
 }
 
 class _AppLocalizationsDelegate

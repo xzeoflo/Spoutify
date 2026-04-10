@@ -52,4 +52,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get register => 'Register';
+
+  @override
+  String get myPlaylists => 'My Playlists';
+
+  @override
+  String get likedTracks => 'Liked Tracks';
+
+  @override
+  String get noPlaylists => 'No playlists yet';
+
+  @override
+  String get newPlaylist => 'New Playlist';
+
+  @override
+  String get playlistNameHint => 'Enter name...';
+
+  @override
+  String get createButton => 'Create';
+
+  @override
+  String get emptyPlaylist => 'This playlist is empty';
+
+  @override
+  String get unknownTitle => 'Unknown title';
+
+  @override
+  String get unknownArtist => 'Unknown artist';
+
+  @override
+  String get trackRemoved => 'Track removed';
+
+  @override
+  String get addToPlaylist => 'Add to playlist';
+
+  @override
+  String get noPlaylistsCreated => 'No playlists created';
+
+  @override
+  String get addedTo => 'Added to';
+
+  @override
+  String get trackAlreadyInPlaylist => 'This track is already in the playlist!';
+
+  @override
+  String get searchHint => 'Artists, songs, or albums';
+
+  @override
+  String get welcomeBack => 'Welcome back';
+
+  @override
+  String get welcomeSpoutify => 'Welcome to Spoutify';
+
+  @override
+  String get madeForYou => 'Made for you';
+
+  @override
+  String get showAll => 'Show all';
+
+  @override
+  String get email => 'Email';
+
+  @override
+  String get password => 'Password';
 }
