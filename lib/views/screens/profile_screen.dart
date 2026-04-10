@@ -145,10 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       //connectivité Spotify
                       SwitchListTile(
-                        secondary: Image.network(
-                          'https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_RGB_Green.png',
-                          height: 20,
-                        ),
+                        secondary: const Icon(Icons.music_note, color: Color(0xFF1DB954)), 
                         title: Text(loc.useSpotifyLabel),
                         subtitle: Text(
                           _isSpotifyConnected 
