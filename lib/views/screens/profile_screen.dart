@@ -156,7 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             : "Lier mon compte pour mes playlists"
                         ),
                         value: _isSpotifyConnected,
-                        activeColor: const Color(0xFF1DB954),
+                        activeThumbColor: const Color(0xFF1DB954),
                         onChanged: (val) => _handleSpotifyToggle(val),
                       ),
                     ],
